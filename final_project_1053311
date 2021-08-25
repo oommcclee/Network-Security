@@ -1,0 +1,291 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from PIL import Image
+import numpy as np
+#import pygame
+
+class Steganography(object):
+
+    @staticmethod
+    def __int_to_bin(rgb):
+        r, g, b = rgb
+        return ('{0:08b}'.format(r),
+                '{0:08b}'.format(g),
+                '{0:08b}'.format(b))
+
+    @staticmethod
+    def __bin_to_int(rgb):
+        r, g, b = rgb
+        return (int(r, 2),
+                int(g, 2),
+                int(b, 2))
+
+    @staticmethod
+    def __merge_rgb(rgb1, rgb2):
+        r1, g1, b1 = rgb1
+        r2, g2, b2 = rgb2
+        rgb = (r1[:4] + r2[2:6],
+               g1[:4] + g2[2:6],
+               b1[:4] + b2[2:6])
+        return rgb	
+
+    @staticmethod
+    def __merge_rgb2(rgb1, rgb2):
+        r1, g1, b1 = rgb1
+        r2, g2, b2 = rgb2
+        rgb = (r1[:4] +r2[:2] + r2[4:6],
+               g1[:4] +r2[:2] + g2[4:6],
+               b1[:4] +r2[:2] + b2[4:6])
+        return rgb	
+
+    @staticmethod
+    def __merge_secret(rgb1, rgb2):
+        r1, g1, b1 = rgb1
+        r2, g2, b2 = rgb2
+        secret = ('0000' + r2[4:],
+                  '0000' + g2[4:],
+                  '0000' + b2[4:])
+        return secret
+    
+    @staticmethod
+    def __merge_secret2(rgb1, rgb2, secret):
+        r1, g1, b1 = rgb1
+        r2, g2, b2 = rgb2
+        sr, sg, sb = secret
+        secret = ('00' + r2[6:8]+sr[4:],
+                  '00' + g2[6:8]+sg[4:],
+                  '00' + b2[6:8]+sb[4:])
+        return secret
+
+
+
+    @staticmethod
+    def secret(img1, img2, imga, imgb):
+        img1 = Image.open(img1)
+        img2 = Image.open(img2)
+        imga = Image.open(imga)
+        imgb = Image.open(imgb)
+        # Check the images dimensions
+        if img2.size[0] > img1.size[0] or img2.size[1] > img1.size[1]:
+            raise ValueError('Image 2 should not be larger than Image 1!')
+
+        # Get the pixel map of the two images
+        pixel_map1 = img1.load()
+        pixel_map2 = img2.load()
+        pixel_mapa = imga.load()
+        pixel_mapb = imgb.load()
+
+        # Create a new image that will be outputted
+        secret_image = Image.new(img2.mode, img2.size)
+        pixels_secret = secret_image.load()
+
+        for i in range(img1.size[0]):
+            for j in range(img1.size[1]):
+                rgb1 = Steganography.__int_to_bin(pixel_map1[i, j])
+
+                # Use a black pixel as default
+                rgb2 = Steganography.__int_to_bin((0, 0, 0))
+
+                # Check if the pixel map position is valid for the second image
+                if i < img2.size[0] and j < img2.size[1]:
+                    rgb2 = Steganography.__int_to_bin(pixel_map2[i, j])
+
+                # Merge the two pixels and convert it to a integer tuple
+                secret = Steganography.__merge_secret(rgb1, rgb2)
+
+                pixels_secret[i, j] = Steganography.__bin_to_int(secret)
+        
+        for i in range(imga.size[0]):
+            for j in range(imga.size[1]):
+                rgba = Steganography.__int_to_bin(pixel_map1[i, j])
+
+                # Use a black pixel as default
+                rgbb = Steganography.__int_to_bin((0, 0, 0))
+                secret = Steganography.__int_to_bin(pixels_secret[i, j])
+
+                # Check if the pixel map position is valid for the second image
+                if i < imgb.size[0] and j < imgb.size[1]:
+                    rgbb = Steganography.__int_to_bin(pixel_mapb[i, j])
+
+                # Merge the two pixels and convert it to a integer tuple
+                secret = Steganography.__merge_secret2(rgba, rgbb, secret)
+
+                pixels_secret[i, j] = Steganography.__bin_to_int(secret)
+
+        return secret_image
+
+
+    @staticmethod
+    def merge(img1, img2):
+        # Check the images dimensions
+        if img2.size[0] > img1.size[0] or img2.size[1] > img1.size[1]:
+            raise ValueError('Image 2 should not be larger than Image 1!')
+
+        # Get the pixel map of the two images
+        pixel_map1 = img1.load()
+        pixel_map2 = img2.load()
+
+        # Create a new image that will be outputted
+        new_image = Image.new(img1.mode, img1.size)
+        pixels_new = new_image.load()
+    
+        for i in range(img1.size[0]):
+            for j in range(img1.size[1]):
+                rgb1 = Steganography.__int_to_bin(pixel_map1[i, j])
+
+                # Use a black pixel as default
+                rgb2 = Steganography.__int_to_bin((0, 0, 0))
+
+                # Check if the pixel map position is valid for the second image
+                if i < img2.size[0] and j < img2.size[1]:
+                    rgb2 = Steganography.__int_to_bin(pixel_map2[i, j])
+
+                # Merge the two pixels and convert it to a integer tuple
+                rgb = Steganography.__merge_rgb(rgb1, rgb2)
+
+                pixels_new[i, j] = Steganography.__bin_to_int(rgb)
+
+        return new_image
+
+    @staticmethod
+    def merge2(img1, img2):
+        # Check the images dimensions
+        if img2.size[0] > img1.size[0] or img2.size[1] > img1.size[1]:
+            raise ValueError('Image 2 should not be larger than Image 1!')
+
+        # Get the pixel map of the two images
+        pixel_map1 = img1.load()
+        pixel_map2 = img2.load()
+
+        # Create a new image that will be outputted
+        new_image = Image.new(img1.mode, img1.size)
+        pixels_new = new_image.load()
+
+        for i in range(img1.size[0]):
+            for j in range(img1.size[1]):
+                rgb1 = Steganography.__int_to_bin(pixel_map1[i, j])
+
+                # Use a black pixel as default
+                rgb2 = Steganography.__int_to_bin((0, 0, 0))
+
+                # Check if the pixel map position is valid for the second image
+                if i < img2.size[0] and j < img2.size[1]:
+                    rgb2 = Steganography.__int_to_bin(pixel_map2[i, j])
+
+                # Merge the two pixels and convert it to a integer tuple
+                rgb = Steganography.__merge_rgb2(rgb1, rgb2)
+
+                pixels_new[i, j] = Steganography.__bin_to_int(rgb)
+
+        return new_image
+
+    @staticmethod
+    def unmerge(img):
+        # Load the pixel map
+        pixel_map = img.load()
+
+        # Create the new image and load the pixel map
+        new_image = Image.new(img.mode, img.size)
+        pixels_new = new_image.load()
+        
+        # Tuple used to store the image original size
+        original_size = img.size
+
+        for i in range(img.size[0]):
+            for j in range(img.size[1]):
+                # Get the RGB (as a string tuple) from the current pixel
+                r, g, b = Steganography.__int_to_bin(pixel_map[i, j])
+
+                # Extract the last 4 bits (corresponding to the hidden image)
+                # Concatenate 4 zero bits because we are working with 8 bit
+                rgb = (r[4:] + '0000',
+                       g[4:] + '0000',
+                       b[4:] + '0000')
+
+                # Convert it to an integer tuple
+                pixels_new[i, j] = Steganography.__bin_to_int(rgb)
+
+               # Crop the image based on the 'valid' pixels
+        new_image = new_image.crop((0, 0, original_size[0], original_size[1]))
+
+        return new_image
+    
+    @staticmethod
+    def unmerge2(img):
+        # Load the pixel map
+        pixel_map = img.load()
+        secret_image = Steganography.secret("/home/oneal/桌面/final/2.png","/home/oneal/桌面/final/3.png", "/home/oneal/桌面/final/1.png","/home/oneal/桌面/final/m1_4.png")
+        pixels_secret = secret_image.load()
+
+        # Create the new image and load the pixel map
+        new_image = Image.new(img.mode, img.size)
+        pixels_new = new_image.load()
+
+        # Tuple used to store the image original size
+        original_size = img.size
+
+        for i in range(img.size[0]):
+            for j in range(img.size[1]):
+                # Get the RGB (as a string tuple) from the current pixel
+                r, g, b = Steganography.__int_to_bin(pixel_map[i, j])
+                sr, sg, sb = Steganography.__int_to_bin(pixels_secret[i, j])
+                # Extract the last 4 bits (corresponding to the hidden image)
+                # Concatenate 4 zero bits because we are working with 8 bit
+                rgb = (r[2:4] + sr[2:],
+                       g[2:4] + sg[2:],
+                       b[2:4] + sb[2:])
+
+                # Convert it to an integer tuple
+                pixels_new[i, j] = Steganography.__bin_to_int(rgb)
+
+        # Crop the image based on the 'valid' pixels
+        new_image = new_image.crop((0, 0, original_size[0], original_size[1]))
+
+        return new_image
+
+
+def merge(img1, img2, output):
+    merged_image = Steganography.merge(Image.open(img1), Image.open(img2))
+    merged_image.save(output)
+
+def merge2(img1, img2, output):
+    merged_image = Steganography.merge2(Image.open(img1), Image.open(img2))
+    merged_image.save(output)
+
+def unmerge(img, output):
+    unmerged_image = Steganography.unmerge(Image.open(img))
+    unmerged_image.save(output)
+
+def unmerge2(img, output):
+    unmerged_image = Steganography.unmerge2(Image.open(img))
+    unmerged_image.save(output)
+merge("/home/oneal/桌面/final/4.png","/home/oneal/桌面/final/3.png","/home/oneal/桌面/final/m1_5.png")
+#merge("/home/oneal/桌面/final/2.png","/home/oneal/桌面/final/3.png","/home/oneal/桌面/final/m1_4.png")
+#merge2("/home/oneal/桌面/final/1.png","/home/oneal/桌面/final/m1_4.png","/home/oneal/桌面/final/m2_4.png")
+#merge("/home/oneal/桌面/final/1.png","/home/oneal/桌面/final/m2.png","/home/oneal/桌面/final/m3.png")
+#unmerge("/home/oneal/桌面/final/m2_4.png","/home/oneal/桌面/final/u1_4.png")
+#unmerge2("/home/oneal/桌面/final/u1_4.png","/home/oneal/桌面/final/u2_4.png")
+#unmerge("/home/oneal/桌面/final/u2.jpg","/home/oneal/桌面/final/u3.jpg")
+#img = pygame.image.load("/home/oneal/桌面/final/4.jpg")
+#width = img.get_width()
+#height = img.get_height()
+#print(width)
+#print(height)
+#img = Image.open("/home/oneal/桌面/final/1.jpg")
+#out = img.resize((500,500))
+#out.save("/home/oneal/桌面/final/1.png")
+
+#img = Image.open("/home/oneal/桌面/final/2.jpg")
+#out = img.resize((500,500))
+#out.save("/home/oneal/桌面/final/2.png")
+
+#img = Image.open("/home/oneal/桌面/final/3.jpg")
+#out = img.resize((500,500))
+#out.save("/home/oneal/桌面/final/3.png")
+
+#img = Image.open("/home/oneal/桌面/final/4.jpg")
+#out = img.resize((500,500))
+#out.save("/home/oneal/桌面/final/4.png")
+
+

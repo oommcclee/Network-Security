@@ -1,0 +1,68 @@
+#! /usr/bin/env python3
+import pwn
+import sys
+sys.setrecursionlimit(1000000)
+
+conn = pwn.process(["nc", "140.138.77.30", "6015"])
+print(conn.recvline())
+print(conn.recvline())
+print(conn.recvline())
+print(conn.recvline())
+print(conn.recvline())
+
+def exgcd( x, y, ABList):
+    if y==0:
+        ABList[0]=1
+        ABList[1]=0
+        ABList = [int(i) for i in ABList ]
+        #  print(ABList)
+        return x
+
+    r = exgcd(y,x%y,ABList)
+    #ABList = [int(i) for i in ABList ] badbadboy
+    #print(ABList)
+    t = ABList[1]
+    ABList[1]=ABList[0] - (x//y)*ABList[1]
+    ABList[0]=t
+    #print("---",ABList)
+    return r
+
+
+for z in range(0,1000):
+    Data = conn.recvline()
+    print(Data)
+    DataStr = str(Data)
+    DataStr = DataStr.strip("\\n'")
+    DataStr = DataStr.replace(",","")
+    List= DataStr.split(" ")
+    del List[0]
+    del List[0]
+    del List[1]
+    del List[1]
+    x = List[0]
+    y = List[1] 
+    x=int(x)
+    y=int(y)
+    ABList=[0,0];
+    gcd = exgcd(x,y,ABList)
+    ABList = [int(i) for i in ABList ]
+    if ABList[0]<0:
+        ABList[0]+=10000;
+    if ABList[1]<0:
+        ABList[1]+=10000;
+    Alist=[gcd,ABList[0],ABList[1]]
+    Alist = [str(i) for i in Alist]
+    Str = ",".join(Alist)
+    #print(Str)
+    conn.sendline(Str)     
+print(conn.recvline())
+
+
+
+
+
+
+
+
+
+

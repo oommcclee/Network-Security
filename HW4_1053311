@@ -1,0 +1,67 @@
+#!/usr/bin/env python 
+#coding = utf-8
+import sys
+import string
+import collections
+import sets
+import codecs
+def toHex(s):
+    lst = []
+    for ch in s:
+        hv = hex(ord(ch)).replace('0x', '')
+        if len(hv) == 1:
+            hv = '0'+hv
+        lst.append(hv)
+    
+    return reduce(lambda x,y:x+y, lst)
+
+def strxor(a, b):     # xor two strings (trims the longer input)
+    return "".join([chr(ord(x) ^ ord(y)) for (x, y) in zip(a, b)])
+
+f =codecs.open('MTPciphertext.txt', mode = 'r',encoding = 'utf-8')
+ciphers = []
+
+newstr = f.read()
+j=0
+while True:    
+    get = newstr[0+j:16+j]
+    if(j+16>1600):
+         break
+    j = j+16   
+    get = toHex(get)
+    for i in get:
+         i.zfill(2)
+    ciphers.append(get)
+    
+final_key = [None]*16
+
+known_key_positions = set()
+
+for current_index, ciphertext in enumerate(ciphers):
+
+	counter = collections.Counter()
+	# for each other ciphertext
+	for index, ciphertext2 in enumerate(ciphers):
+		if current_index != index: 
+			for indexOfChar, char in enumerate(strxor(ciphertext.decode('hex'), ciphertext2.decode('hex'))): 
+				if char in string.printable and char.isalpha(): counter[indexOfChar] += 1 
+	knownSpaceIndexes = []
+
+	for ind, val in counter.items():
+		if val >= 200: knownSpaceIndexes.append(ind)
+	
+	xor_with_spaces = strxor(ciphertext.decode('hex'),' '*16)
+        
+	for index in knownSpaceIndexes:
+		final_key[index] = xor_with_spaces[index].encode('hex')
+		known_key_positions.add(index)
+
+
+final_key_hex = ''.join([val if val is not None else '00' for val in final_key])
+#print(final_key_hex)
+target = "flag{hello, I'm "
+#print(strxor(ciphers[0].decode('hex'), final_key_hex.decode('hex')))
+#print(strxor(ciphers[1].decode('hex'), final_key_hex.decode('hex')))
+key = toHex(strxor(ciphers[0].decode('hex'), target))
+for i in ciphers:
+    print(strxor(i.decode('hex'), key.decode('hex')))
